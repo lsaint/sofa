@@ -9,7 +9,7 @@ message UserData
     optional uint32 imid = 3; 
     optional int32 sex = 4;  
     optional int32 role = 5;
-    optional int32 seat_num = 6;
+    optional uint32 seat_num = 6;
     optional bool is_win = 7;
 }
 
@@ -49,11 +49,11 @@ message C2SStartGame {
     }
     
     message SpecifyNum {
-        repeated int32 numbers = 1;
+        repeated uint32 numbers = 1;
     }
     message SectionNum {
-        required int32 lower = 1;
-        required int32 upper = 2;
+        required uint32 lower = 1;
+        required uint32 upper = 2;
     }
     message SuffixNum {
         required int32 suffix = 1;
@@ -63,6 +63,11 @@ message C2SStartGame {
     optional SpecifyNum spe = 2;
     optional SectionNum sec = 3;
     optional SuffixNum  suf = 4;
+}
+
+// 1002
+message S2CStartGameRep {
+    required Result ret = 1;
 }
 
 // 2002
@@ -77,6 +82,20 @@ message C2STug {
 // 1003
 message S2CTugRep {
     repeated UserData seat_list = 1;
+}
+
+// 4
+message C2SStopGame {
+}
+
+// 1004
+message S2CStopGameRep {
+    required Result ret = 1;
+}
+
+// 2004
+message S2CNotifyGameStop {
+    required UserData user_info = 1;
 }
 
 // 2001

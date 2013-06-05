@@ -57,7 +57,6 @@ func (this *GameMgr) OnLogin(cliConn *ClientConnection, request interface{}) {
     sid := req.GetChannel()
     if sid == 0 { return }
     this.AddPlayer(cliConn, player)
-    player.SendMsg(rep)
 
     var room *GameRoom
     var ok bool
@@ -68,13 +67,27 @@ func (this *GameMgr) OnLogin(cliConn *ClientConnection, request interface{}) {
     player.UserData = req.UserInfo
     player.Room = room
     room.ComeIn(player)
+
+    rep.Status = room.Status
+    player.SendMsg(rep)
 }
 
+func (this *GameMgr) OnStartGame(player *Player, room *GameRoom, request interface{}) {
+    req := request.(*proto.C2SStartGame)
+    fmt.Println("OnStartGame", req)
+    room.Start(player, req)
+}
 
-//func (this *GameMgr) OnSceneBroadcast(player *Player, scene *GameRoom, request interface{}) {
-//    req := request.(*proto.C2SSceneBroadcast)
-//    fmt.Println("Broadcast req", req)
-//    rep := &proto.S2CSceneBroadcastRep{Msg:req.Msg}
-//    scene.Broadcast(rep)
-//}
+func (this *GameMgr) OnTug(player *Player, room *GameRoom, request interface{}) {
+    req := request.(*proto.C2STug)
+    fmt.Println("OnTug", req)
+    room.Tug(player)
+}
+
+func (this *GameMgr) OnStopGame(player *Player, room *GameRoom, request interface{}) {
+    //req := request.(*proto.C2StopGame)
+    fmt.Println("OnStop")
+    room.Stop(player)
+}
+
 

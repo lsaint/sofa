@@ -37,7 +37,7 @@ func (this *ClientConnection) send(buf []byte) {
     binary.LittleEndian.PutUint32(head, uint32(len(buf)))
     buf = append(head, buf...)
 
-    select {                                                                                                          
+    select {
         case this.channel <- buf:
 
         default:
@@ -81,6 +81,7 @@ func (this *ClientConnection) duplexRead(buff []byte) bool {
     for {
         // write
         if !this.sendall() {
+            fmt.Println("send err")
             return false
         }
 
