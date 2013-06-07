@@ -68,7 +68,7 @@ func (this *GameMgr) OnLogin(cliConn *ClientConnection, request interface{}) {
     player.Room = room
     room.ComeIn(player)
 
-    rep.Status = room.Status
+    rep.Status = room.Status.Enum()
     player.SendMsg(rep)
 }
 
@@ -90,4 +90,7 @@ func (this *GameMgr) OnStopGame(player *Player, room *GameRoom, request interfac
     room.Stop(player)
 }
 
+func (this *GameMgr) OnLogout(player *Player, room *GameRoom, request interface{}) {
+    this.Disconnect(player.ClientConnection)
+}
 

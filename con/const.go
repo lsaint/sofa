@@ -5,5 +5,6 @@ const (
     MAX_LEN_HEAD = 1024 * 100
     OK = 0
     FL = 1
+    ROLE_LEVEL = 100
 )
 

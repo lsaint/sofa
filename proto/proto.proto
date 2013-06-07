@@ -98,6 +98,10 @@ message S2CNotifyGameStop {
     required UserData user_info = 1;
 }
 
+// 5
+message C2SLogout {
+}
+
 // 2001
 message S2CNotifyWinners {
     repeated UserData winner_list = 1;

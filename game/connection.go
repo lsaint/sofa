@@ -93,7 +93,7 @@ func (this *ClientConnection) duplexRead(buff []byte) bool {
                 read_size = n
                 continue
             } else {
-                fmt.Println("read err, disconnect", err)
+                //fmt.Println("read err, disconnect", err)
                 return false
             }
         }

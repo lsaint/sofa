@@ -43,14 +43,12 @@ func (this *GameServer) Start() {
 }
 
 func (this *GameServer) acceptConn(conn net.Conn) {
-    fmt.Println("acceptConn")
     cliConn := NewClientConnection(conn)
     for {
         if buff_body, ok := cliConn.duplexReadBody(); ok {
             this.parse(cliConn, buff_body)
             continue
         }
-        fmt.Println("readbody err")
         this.Mgr.Disconnect(cliConn)
         return
     }
@@ -64,7 +62,6 @@ func (this *GameServer) parse(cliConn *ClientConnection, msg []byte) {
     //}()
 
     uri := binary.LittleEndian.Uint32(msg[:4])
-    fmt.Println("uri", uri)
 
     ty := proto.URI2PROTO[uri]
     new_ins_value := reflect.New(ty)
