@@ -218,9 +218,11 @@ func (this *GameRoom) Bingo(player *Player) {
         player.IsWin = pb.Bool(true)
         this.Uid2Winner[player.Uid] = player.UserData
         this.Broadcast(this.PackWinnersMsg())
+        fmt.Println("win", player.Uid)
     }
 
     sn := player.GetSeatNum()
+    player.IsWin = pb.Bool(false)
     switch this.GameParam.GetType() {
         case proto.C2SStartGame_NilType:
             fmt.Println("nil type")
@@ -238,8 +240,8 @@ func (this *GameRoom) Bingo(player *Player) {
                 setWinner(player)
             }
         case proto.C2SStartGame_SufType:
-            fmt.Println("suf type")
             suf := this.GameParam.GetSuf().GetSuffix()
+            fmt.Println("suffix", suf)
             ssuf, ssn := strconv.Itoa(int(suf)), strconv.FormatInt(int64(sn), 10)
             lssuf, lssn := len(ssuf), len(ssn)
             if lssuf >= lssn && ssuf == ssn[lssuf-lssn:] {
