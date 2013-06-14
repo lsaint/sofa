@@ -24,6 +24,7 @@ func (aus *AuthServer) Start() {
         go func(c net.Conn) {
             c.Write([]byte(con.XML_REP))
             c.Write([]byte("\x00"))
+            c.Close()
         }(conn)
     }
 }
