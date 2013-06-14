@@ -124,7 +124,6 @@ func (this *GameRoom) Start(player *Player, param *proto.C2SStartGame) {
 }
 
 func (this *GameRoom) Stop(player *Player) {
-    fmt.Println("STOP")
     this.sLock.Lock()
     defer this.sLock.Unlock()
     if this.Status != proto.GameStatus_Started {
@@ -144,7 +143,7 @@ func (this *GameRoom) Tug(player *Player) {
 }
 
 func (this *GameRoom) OnTug(player *Player) {
-    fmt.Println("room.OnTug")
+    //fmt.Println("room.OnTug")
     if this.Status != proto.GameStatus_Started {
         fmt.Println("tug: game not started")
         return
@@ -244,7 +243,7 @@ func (this *GameRoom) Bingo(player *Player) {
             fmt.Println("suffix", suf)
             ssuf, ssn := strconv.Itoa(int(suf)), strconv.FormatInt(int64(sn), 10)
             lssuf, lssn := len(ssuf), len(ssn)
-            if lssuf >= lssn && ssuf == ssn[lssuf-lssn:] {
+            if lssn >= lssuf && ssuf == ssn[lssn-lssuf:] {
                 setWinner(player)
             }
     }
