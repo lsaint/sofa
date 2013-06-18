@@ -8,6 +8,7 @@ import (
     pb "code.google.com/p/goprotobuf/proto"
 
     "sofa/proto"
+    "sofa/network"
 )
 
 
@@ -15,13 +16,13 @@ import (
 
 //
 type Player struct {
-    *ClientConnection
+    *network.ClientConnection
     *proto.UserData
     Uid         uint32
     Room       *GameRoom
 }
 
-func NewPlayer(cliConn *ClientConnection, uid uint32) *Player {
+func NewPlayer(cliConn *network.ClientConnection, uid uint32) *Player {
     return &Player{ ClientConnection:cliConn, Uid:uid}
 }
 
@@ -33,7 +34,7 @@ func (this *Player) SendMsg(msgs ...pb.Message) {
                 uri_field := make([]byte, 4)
                 binary.LittleEndian.PutUint32(uri_field, uri)
                 data = append(uri_field, data...)
-                this.send(data)
+                this.Send(data)
             } else {
                 fmt.Println("SendMsg uri not exist", err, "type->", ty)
             }

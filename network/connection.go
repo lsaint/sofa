@@ -1,4 +1,4 @@
-package game
+package network
 
 import (
     "fmt"
@@ -7,12 +7,13 @@ import (
     "encoding/binary"
     "time"
 
-    "sofa/con"
 )
 
 const (
     ConnStateIn    = iota
     ConnStateDisc  = iota
+
+    MAX_LEN_HEAD   = 1024 * 100
 )
 
 type ClientConnection struct {
@@ -30,7 +31,7 @@ func NewClientConnection(c net.Conn) *ClientConnection {
     return cliConn
 }
 
-func (this *ClientConnection) send(buf []byte) {
+func (this *ClientConnection) Send(buf []byte) {
     if this.connState == ConnStateDisc { return }
 
     head := make([]byte, 4)
@@ -114,7 +115,7 @@ func (this *ClientConnection) duplexReadBody() (ret []byte,  ok bool) {
         return
     }
     len_head := binary.LittleEndian.Uint32(buff_head)
-    if len_head > con.MAX_LEN_HEAD {
+    if len_head > MAX_LEN_HEAD {
         fmt.Println("message len too long", len_head)
         return
     }

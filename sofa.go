@@ -13,6 +13,7 @@ import (
     _ "net/http/pprof"
 
     "sofa/game"
+    "sofa/network"
 )
 
 
@@ -38,7 +39,7 @@ func main() {
     go authServer.Start()
     
     mgr := game.NewGameMgr()
-    gs := game.NewGameServer(mgr)
+    gs := network.NewGameServer(mgr)
     go gs.Start()
 
     handleSig()

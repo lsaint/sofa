@@ -4,6 +4,7 @@ import (
     "sync"
 
     "sofa/proto"
+    "sofa/network"
 )
 
 
@@ -116,27 +117,27 @@ func (this *Uid2Player) GetPlayers() (players []*Player) {
 //////////////////////////////////////////////////////////////////////
 
 type Conn2Player struct {
-    cliConn2Player      map[*ClientConnection]*Player
+    cliConn2Player      map[*network.ClientConnection]*Player
     cLock               sync.RWMutex
 }
 
 func NewConn2Player() *Conn2Player {
-    return &Conn2Player{cliConn2Player : make(map[*ClientConnection]*Player)}
+    return &Conn2Player{cliConn2Player : make(map[*network.ClientConnection]*Player)}
 }
 
-func (this *Conn2Player) AddPlayer(cliConn *ClientConnection, player *Player) {
+func (this *Conn2Player) AddPlayer(cliConn *network.ClientConnection, player *Player) {
     this.cLock.Lock()
     defer this.cLock.Unlock()
     this.cliConn2Player[cliConn] = player
 }
 
-func (this *Conn2Player) RmPlayer(cliConn *ClientConnection) {
+func (this *Conn2Player) RmPlayer(cliConn *network.ClientConnection) {
     this.cLock.Lock()
     defer this.cLock.Unlock()
     delete(this.cliConn2Player, cliConn)
 }
 
-func (this *Conn2Player) GetPlayer(cliConn *ClientConnection) (u *Player, ok bool) {
+func (this *Conn2Player) GetPlayer(cliConn *network.ClientConnection) (u *Player, ok bool) {
     this.cLock.RLock()
     defer this.cLock.RUnlock()
     u, ok = this.cliConn2Player[cliConn]

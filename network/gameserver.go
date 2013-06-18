@@ -1,4 +1,4 @@
-package game
+package network
 
 import (
     "fmt"
@@ -14,14 +14,19 @@ import (
 func init() {
 }
 
+type IDispatcher interface {
+    Dispatch(cliConn *ClientConnection, request interface{})
+    Disconnect(cliConn *ClientConnection)
+}
+
 type GameServer struct {
-    Mgr     *GameMgr
+    Dispatcher     IDispatcher
 }
 
 
-func NewGameServer(mgr *GameMgr) *GameServer {
+func NewGameServer(d IDispatcher) *GameServer {
     return &GameServer{
-        Mgr : mgr,
+        Dispatcher : d,
     }
 }
 
@@ -49,7 +54,7 @@ func (this *GameServer) acceptConn(conn net.Conn) {
             this.parse(cliConn, buff_body)
             continue
         }
-        this.Mgr.Disconnect(cliConn)
+        this.Dispatcher.Disconnect(cliConn)
         break
     }
     conn.Close()
@@ -71,9 +76,6 @@ func (this *GameServer) parse(cliConn *ClientConnection, msg []byte) {
         fmt.Println("pb Unmarshal", err)
         return
     }
-    this.Mgr.dispatch(cliConn, new_ins_value.Interface())
-
-    //req_method_value := reflect.ValueOf(gas.Mgr).MethodByName("On" + method_name)
-    //req_method_value.Call([]reflect.Value{reflect.ValueOf(c), new_ins_value})
+    this.Dispatcher.Dispatch(cliConn, new_ins_value.Interface())
 }
 

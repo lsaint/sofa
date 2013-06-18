@@ -6,7 +6,7 @@ import (
 
     //pb "code.google.com/p/goprotobuf/proto"
 
-    //"sofa/con"
+    "sofa/network"
     "sofa/proto"
 )
 
@@ -23,7 +23,7 @@ func NewGameMgr() *GameMgr {
     }
 }
 
-func (this *GameMgr) dispatch(cliConn *ClientConnection, request interface{}) {
+func (this *GameMgr) Dispatch(cliConn *network.ClientConnection, request interface{}) {
     pname := reflect.ValueOf(request).Type().Elem().Name()[3:]
     //fmt.Println("onProto name", pname)
     player, ok := this.GetPlayer(cliConn)
@@ -42,14 +42,14 @@ func (this *GameMgr) dispatch(cliConn *ClientConnection, request interface{}) {
                 reflect.ValueOf(player.Room), reflect.ValueOf(request)})
 }
 
-func (this *GameMgr) Disconnect(cliConn *ClientConnection) {
+func (this *GameMgr) Disconnect(cliConn *network.ClientConnection) {
     if player, ok := this.GetPlayer(cliConn); ok {
         player.Room.Leave(player)
         this.RmPlayer(cliConn)
     }
 }
 
-func (this *GameMgr) OnLogin(cliConn *ClientConnection, request interface{}) {
+func (this *GameMgr) OnLogin(cliConn *network.ClientConnection, request interface{}) {
     req := request.(*proto.C2SLogin)
     fmt.Println("onlogin", req)
     rep := &proto.S2CLoginRep{Ret: proto.Result_OK.Enum()}
