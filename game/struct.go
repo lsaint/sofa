@@ -2,6 +2,8 @@ package game
 
 import (
     "sync"
+
+    "sofa/proto"
 )
 
 
@@ -146,4 +148,41 @@ func (this *Conn2Player) Len() int {
     defer this.cLock.RUnlock()
     return len(this.cliConn2Player)
 }
+
+//////////////////////////////////////////////////////////////////////
+
+type GameStatus struct {
+    Status      proto.GameStatus
+    sync.RWMutex
+}
+
+func NewGameStatus() *GameStatus {
+    return &GameStatus{Status: proto.GameStatus_NotStarted}
+}
+
+func (this *GameStatus) SetStatus(st proto.GameStatus) {
+    this.Lock()    
+    defer this.Unlock()
+    this.Status = st
+}
+
+func (this *GameStatus) GetStatus() proto.GameStatus {
+    this.RLock()
+    defer this.RUnlock()
+    return this.Status
+}
+
+func (this *GameStatus) IsStarted() bool {
+    this.RLock()
+    defer this.RUnlock()
+    return this.Status == proto.GameStatus_Started
+}
+
+//////////////////////////////////////////////////////////////////////
+
+type Uid2Seat map[uint32]uint32
+
+type Uid2Winner map[uint32]*proto.UserData
+
+type Seat2UserData map[uint32]*proto.UserData
 

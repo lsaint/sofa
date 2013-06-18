@@ -25,7 +25,7 @@ func NewGameMgr() *GameMgr {
 
 func (this *GameMgr) dispatch(cliConn *ClientConnection, request interface{}) {
     pname := reflect.ValueOf(request).Type().Elem().Name()[3:]
-    fmt.Println("onProto name", pname)
+    //fmt.Println("onProto name", pname)
     player, ok := this.GetPlayer(cliConn)
 
     if pname == "Login" && !ok {
@@ -68,25 +68,23 @@ func (this *GameMgr) OnLogin(cliConn *ClientConnection, request interface{}) {
     player.Room = room
     room.ComeIn(player)
 
-    rep.Status = room.Status.Enum()
+    rep.Status = room.GetStatus().Enum()
     player.SendMsg(rep)
+    fmt.Println("len:", this.Conn2Player.Len())
 }
 
 func (this *GameMgr) OnStartGame(player *Player, room *GameRoom, request interface{}) {
     req := request.(*proto.C2SStartGame)
-    fmt.Println("OnStartGame", req)
     room.Start(player, req)
 }
 
 func (this *GameMgr) OnTug(player *Player, room *GameRoom, request interface{}) {
-    req := request.(*proto.C2STug)
-    fmt.Println("OnTug", req)
-    room.Tug(player)
+    //req := request.(*proto.C2STug)
+    room.OnTug(player)
 }
 
 func (this *GameMgr) OnStopGame(player *Player, room *GameRoom, request interface{}) {
     //req := request.(*proto.C2StopGame)
-    fmt.Println("OnStop")
     room.Stop(player)
 }
 

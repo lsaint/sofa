@@ -4,6 +4,7 @@ import (
     "fmt"
     "sync"
     "strconv"
+    "runtime"
 
     pb "code.google.com/p/goprotobuf/proto"
 
@@ -11,25 +12,20 @@ import (
     "sofa/con"
 )
 
-//
-type Uid2Seat map[uint32]uint32
-
-type Uid2Winner map[uint32]*proto.UserData
-
-type Seat2UserData map[uint32]*proto.UserData
 
 //
 type GameRoom struct {
     *Uid2Player
+    GameStatus
+
     Uid2Seat
     Seat2UserData
     Uid2Winner
+    RoundLock   sync.RWMutex
+
     Sid         uint32
     CurNum      uint32
-    Status      proto.GameStatus
-    sLock       sync.RWMutex       
     GameParam   *proto.C2SStartGame
-    ChanTug     chan *Player
 }
 
 func NewGameRoom(sid uint32) *GameRoom {
@@ -48,22 +44,15 @@ func (this *GameRoom) reset() {
     this.Uid2Seat = make(map[uint32]uint32)
     this.Seat2UserData = make(map[uint32]*proto.UserData)
     this.Uid2Winner = make(map[uint32]*proto.UserData)
-    this.ChanTug = make(chan *Player)
 }
 
 func (this *GameRoom) eventLoop() {
-    for {
-        select {
-            case player := <-this.ChanTug:
-                if player != nil {
-                    this.OnTug(player)
-                }
-        }
-    }
 }
 
 func (this *GameRoom) ComeIn(player *Player) bool {
     this.AddPlayer(player.Uid, player)
+    this.RoundLock.RLock()
+    defer this.RoundLock.RUnlock()
     if seat, exist := this.Uid2Seat[player.Uid]; exist {
         player.SeatNum = pb.Uint32(seat)
         if _, exist := this.Uid2Winner[player.Uid]; exist {
@@ -73,6 +62,7 @@ func (this *GameRoom) ComeIn(player *Player) bool {
     }
 
     player.SendMsg(this.PackWinnersMsg())
+    fmt.Println("room len:", this.Uid2Player.Len())
     return true
 }
 
@@ -109,12 +99,13 @@ func (this *GameRoom) CheckAuth(player *Player) bool {
 
 func (this *GameRoom) Start(player *Player, param *proto.C2SStartGame) {
     fmt.Println("START", param)
-    this.sLock.Lock()
-    defer this.sLock.Unlock()
+    this.GameStatus.Lock()
+    defer this.GameStatus.Unlock()
     if this.Status == proto.GameStatus_Started || 
                 !this.CheckGameParam(param) || !this.CheckAuth(player) {
         rep := &proto.S2CStartGameRep{Ret: proto.Result_FL.Enum()}
         player.SendMsg(rep)
+        fmt.Println("START err")
         return
     }
     this.Status = proto.GameStatus_Started
@@ -124,8 +115,8 @@ func (this *GameRoom) Start(player *Player, param *proto.C2SStartGame) {
 }
 
 func (this *GameRoom) Stop(player *Player) {
-    this.sLock.Lock()
-    defer this.sLock.Unlock()
+    this.GameStatus.Lock()
+    defer this.GameStatus.Unlock()
     if this.Status != proto.GameStatus_Started {
         rep := &proto.S2CStopGameRep{Ret: proto.Result_FL.Enum()}
         player.SendMsg(rep)
@@ -134,20 +125,21 @@ func (this *GameRoom) Stop(player *Player) {
     fmt.Println("stop sucess")
     rep := &proto.S2CNotifyGameStop{UserInfo: &proto.UserData{Name: player.Name}}
     this.Broadcast(rep)
-    close(this.ChanTug)
+    this.RoundLock.Lock()
     this.reset()
+    this.RoundLock.Unlock()
+    runtime.GC()
 }
 
-func (this *GameRoom) Tug(player *Player) {
-    this.ChanTug <- player
-}
 
 func (this *GameRoom) OnTug(player *Player) {
     //fmt.Println("room.OnTug")
-    if this.Status != proto.GameStatus_Started {
-        fmt.Println("tug: game not started")
+    if !this.IsStarted() {
+        //fmt.Println("tug: game not started")
         return
     }
+    this.RoundLock.Lock()
+    defer this.RoundLock.Unlock()
     if this.Uid2Seat[player.Uid] == 0 {
         this.CurNum++
         player.SeatNum = pb.Uint32(this.CurNum)
