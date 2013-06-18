@@ -50,8 +50,9 @@ func (this *GameServer) acceptConn(conn net.Conn) {
             continue
         }
         this.Mgr.Disconnect(cliConn)
-        return
+        break
     }
+    conn.Close()
 }
 
 func (this *GameServer) parse(cliConn *ClientConnection, msg []byte) {
