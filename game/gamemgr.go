@@ -37,9 +37,14 @@ func (this *GameMgr) Dispatch(cliConn *network.ClientConnection, request interfa
         return
     }
 
-    handle := reflect.ValueOf(this).MethodByName("On" + pname)
-    handle.Call([]reflect.Value{reflect.ValueOf(player), 
-                reflect.ValueOf(player.Room), reflect.ValueOf(request)})
+    if handle := reflect.ValueOf(this).MethodByName("On" + pname); handle.IsValid() {
+        handle.Call([]reflect.Value{reflect.ValueOf(player), 
+                    reflect.ValueOf(player.Room), reflect.ValueOf(request)})
+        return
+    }
+
+    handle := reflect.ValueOf(player.Room).MethodByName("On" + pname)
+    handle.Call([]reflect.Value{reflect.ValueOf(player), reflect.ValueOf(request)})
 }
 
 func (this *GameMgr) Disconnect(cliConn *network.ClientConnection) {
@@ -73,20 +78,10 @@ func (this *GameMgr) OnLogin(cliConn *network.ClientConnection, request interfac
     fmt.Println("len:", this.Conn2Player.Len())
 }
 
-func (this *GameMgr) OnStartGame(player *Player, room *GameRoom, request interface{}) {
-    req := request.(*proto.C2SStartGame)
-    room.Start(player, req)
-}
-
-func (this *GameMgr) OnTug(player *Player, room *GameRoom, request interface{}) {
-    //req := request.(*proto.C2STug)
-    room.OnTug(player)
-}
-
-func (this *GameMgr) OnStopGame(player *Player, room *GameRoom, request interface{}) {
-    //req := request.(*proto.C2StopGame)
-    room.Stop(player)
-}
+//func (this *GameMgr) OnStartGame(player *Player, room *GameRoom, request interface{}) {
+//    req := request.(*proto.C2SStartGame)
+//    room.Start(player, req)
+//}
 
 func (this *GameMgr) OnLogout(player *Player, room *GameRoom, request interface{}) {
     this.Disconnect(player.ClientConnection)

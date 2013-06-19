@@ -97,7 +97,8 @@ func (this *GameRoom) CheckAuth(player *Player) bool {
     return player.GetRole() > con.ROLE_LEVEL 
 }
 
-func (this *GameRoom) Start(player *Player, param *proto.C2SStartGame) {
+func (this *GameRoom) OnStartGame(player *Player, request interface{}) {
+    param := request.(*proto.C2SStartGame)
     fmt.Println("START", param)
     this.GameStatus.Lock()
     defer this.GameStatus.Unlock()
@@ -114,7 +115,7 @@ func (this *GameRoom) Start(player *Player, param *proto.C2SStartGame) {
     this.Broadcast(rep)
 }
 
-func (this *GameRoom) Stop(player *Player) {
+func (this *GameRoom) OnStopGame(player *Player, request interface{}) {
     this.GameStatus.Lock()
     defer this.GameStatus.Unlock()
     if this.Status != proto.GameStatus_Started {
@@ -132,7 +133,7 @@ func (this *GameRoom) Stop(player *Player) {
 }
 
 
-func (this *GameRoom) OnTug(player *Player) {
+func (this *GameRoom) OnTug(player *Player, request interface{}) {
     //fmt.Println("room.OnTug")
     if !this.IsStarted() {
         //fmt.Println("tug: game not started")
