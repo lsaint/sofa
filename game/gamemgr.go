@@ -49,8 +49,14 @@ func (this *GameMgr) Dispatch(cliConn *network.ClientConnection, request interfa
 
 func (this *GameMgr) Disconnect(cliConn *network.ClientConnection) {
     if player, ok := this.GetPlayer(cliConn); ok {
-        player.Room.Leave(player)
+        room := player.Room
+        room.Leave(player)
         this.RmPlayer(cliConn)
+
+        if room.Uid2Player.Len() == 0 {
+            this.Sid2GameRoom.RmGameRoom(room.Sid)
+            fmt.Println("Rm room", room.Sid)
+        }
     }
 }
 
@@ -75,13 +81,8 @@ func (this *GameMgr) OnLogin(cliConn *network.ClientConnection, request interfac
 
     rep.Status = room.GetStatus().Enum()
     player.SendMsg(rep)
-    fmt.Println("len:", this.Conn2Player.Len())
+    fmt.Println("Total:", this.Conn2Player.Len(), this.Sid2GameRoom.Len())
 }
-
-//func (this *GameMgr) OnStartGame(player *Player, room *GameRoom, request interface{}) {
-//    req := request.(*proto.C2SStartGame)
-//    room.Start(player, req)
-//}
 
 func (this *GameMgr) OnLogout(player *Player, room *GameRoom, request interface{}) {
     this.Disconnect(player.ClientConnection)

@@ -21,11 +21,11 @@ type GameRoom struct {
     Uid2Seat
     Seat2UserData
     Uid2Winner
+    CurNum      uint32
+    GameParam   *proto.C2SStartGame
     RoundLock   sync.RWMutex
 
     Sid         uint32
-    CurNum      uint32
-    GameParam   *proto.C2SStartGame
 }
 
 func NewGameRoom(sid uint32) *GameRoom {
@@ -34,7 +34,6 @@ func NewGameRoom(sid uint32) *GameRoom {
         Sid             :   sid,
     }
     room.reset()
-    go room.eventLoop()
     return room
 }
 
@@ -44,9 +43,6 @@ func (this *GameRoom) reset() {
     this.Uid2Seat = make(map[uint32]uint32)
     this.Seat2UserData = make(map[uint32]*proto.UserData)
     this.Uid2Winner = make(map[uint32]*proto.UserData)
-}
-
-func (this *GameRoom) eventLoop() {
 }
 
 func (this *GameRoom) ComeIn(player *Player) bool {
@@ -62,7 +58,7 @@ func (this *GameRoom) ComeIn(player *Player) bool {
     }
 
     player.SendMsg(this.PackWinnersMsg())
-    fmt.Println("room len:", this.Uid2Player.Len())
+    fmt.Println("Room len:", this.Sid, this.Uid2Player.Len())
     return true
 }
 
@@ -99,7 +95,6 @@ func (this *GameRoom) CheckAuth(player *Player) bool {
 
 func (this *GameRoom) OnStartGame(player *Player, request interface{}) {
     param := request.(*proto.C2SStartGame)
-    fmt.Println("START", param)
     this.GameStatus.Lock()
     defer this.GameStatus.Unlock()
     if this.Status == proto.GameStatus_Started || 
@@ -109,6 +104,7 @@ func (this *GameRoom) OnStartGame(player *Player, request interface{}) {
         fmt.Println("START err")
         return
     }
+    fmt.Println("START", player.Uid, this.Sid, param)
     this.Status = proto.GameStatus_Started
     this.GameParam = param
     rep := &proto.S2CNotifyGameStart{UserInfo: &proto.UserData{Name: player.Name}}
@@ -123,7 +119,7 @@ func (this *GameRoom) OnStopGame(player *Player, request interface{}) {
         player.SendMsg(rep)
         return
     }
-    fmt.Println("stop sucess")
+    fmt.Println("STOP", player.Uid, this.Sid)
     rep := &proto.S2CNotifyGameStop{UserInfo: &proto.UserData{Name: player.Name}}
     this.Broadcast(rep)
     this.RoundLock.Lock()
@@ -149,7 +145,7 @@ func (this *GameRoom) OnTug(player *Player, request interface{}) {
     } else {
         return
     }
-    fmt.Println(player.Uid, "Tug", player.GetSeatNum())
+    //fmt.Println(player.Uid, "Tug", player.GetSeatNum())
     this.Bingo(player)
     player.SendMsg(this.PackTugMsg(player))
     this.SendBesideTugMsg(player)
@@ -206,34 +202,35 @@ func (this *GameRoom) PackWinnersMsg() *proto.S2CNotifyWinners {
 }
 
 func (this *GameRoom) Bingo(player *Player) {
+    if len(this.Uid2Winner) >= 100 {
+        return
+    }
+
     setWinner := func(player *Player) {
         player.IsWin = pb.Bool(true)
         this.Uid2Winner[player.Uid] = player.UserData
         this.Broadcast(this.PackWinnersMsg())
-        fmt.Println("win", player.Uid)
+        fmt.Println("WIN", player.Uid, this.Sid, player.GetSeatNum())
     }
 
     sn := player.GetSeatNum()
     player.IsWin = pb.Bool(false)
     switch this.GameParam.GetType() {
         case proto.C2SStartGame_NilType:
-            fmt.Println("nil type")
+
         case proto.C2SStartGame_SpeType:
-            fmt.Println("spe type")
             for _, n := range this.GameParam.GetSpe().GetNumbers() {
                 if sn == n {
                     setWinner(player)
                 }
             }
         case proto.C2SStartGame_SecType:
-            fmt.Println("sec type")
             if sn >= this.GameParam.GetSec().GetLower() &&
                sn <= this.GameParam.GetSec().GetUpper() {
                 setWinner(player)
             }
         case proto.C2SStartGame_SufType:
             suf := this.GameParam.GetSuf().GetSuffix()
-            fmt.Println("suffix", suf)
             ssuf, ssn := strconv.Itoa(int(suf)), strconv.FormatInt(int64(sn), 10)
             lssuf, lssn := len(ssuf), len(ssn)
             if lssn >= lssuf && ssuf == ssn[lssn-lssuf:] {
