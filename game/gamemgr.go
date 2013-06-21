@@ -69,12 +69,7 @@ func (this *GameMgr) OnLogin(cliConn *network.ClientConnection, request interfac
     if sid == 0 { return }
     this.AddPlayer(cliConn, player)
 
-    var room *GameRoom
-    var ok bool
-    if room, ok = this.GetGameRoom(sid); !ok {
-        room = NewGameRoom(sid)
-        this.AddGameRoom(sid, room)
-    }
+    room := this.GainGameRoom(sid)
     player.UserData = req.UserInfo
     player.Room = room
     room.ComeIn(player)

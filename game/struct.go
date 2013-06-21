@@ -17,10 +17,15 @@ func NewSid2GameRoom() *Sid2GameRoom {
     return &Sid2GameRoom{sid2scene:make(map[uint32]*GameRoom)}
 }
 
-func (this *Sid2GameRoom) AddGameRoom(sid uint32, scene *GameRoom) {
+func (this *Sid2GameRoom) GainGameRoom(sid uint32) *GameRoom {
     this.umLock.Lock()
     defer this.umLock.Unlock()
-    this.sid2scene[sid] = scene
+    if r, ok := this.sid2scene[sid]; ok {
+        return r
+    }
+    room := NewGameRoom(sid)
+    this.sid2scene[sid] = room
+    return room
 }
 
 func (this *Sid2GameRoom) RmGameRoom(sid uint32) {
