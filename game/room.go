@@ -74,14 +74,14 @@ func (this *GameRoom) Leave(player *Player) {
 }
 
 func (this* GameRoom) CheckGameParam(param *proto.C2SStartGame) bool {
-    switch this.GameParam.GetType() {
+    switch param.GetType() {
         case proto.C2SStartGame_SpeType:
-            if len(this.GameParam.GetSpe().GetNumbers()) == 0 {
+            if len(param.GetSpe().GetNumbers()) == 0 {
                 return false
             }
         case proto.C2SStartGame_SecType:
-            lower := this.GameParam.GetSec().GetLower()
-            upper := this.GameParam.GetSec().GetUpper()
+            lower := param.GetSec().GetLower()
+            upper := param.GetSec().GetUpper()
             if upper < lower || upper == 0 {
                 return false
             }
