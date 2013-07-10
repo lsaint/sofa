@@ -1,11 +1,11 @@
 package network
 
 import (
+    "io"
     "fmt"
-    "net"
+    //"net"
     "bufio"
     "encoding/binary"
-    "time"
 
 )
 
@@ -13,66 +13,38 @@ const (
     ConnStateIn    = iota
     ConnStateDisc  = iota
 
-    MAX_LEN_HEAD   = 1024 * 100
+    MAX_LEN_HEAD   = 1024 * 4
 )
 
 type ClientConnection struct {
-    conn        net.Conn
-    reader      *bufio.Reader
+    rw          *bufio.ReadWriter
     connState   int
-    channel     chan []byte 
 }
 
-func NewClientConnection(c net.Conn) *ClientConnection {
+func NewClientConnection(rw io.ReadWriter) *ClientConnection {
     cliConn := new(ClientConnection)
-    cliConn.conn = c
-    cliConn.reader = bufio.NewReader(c)
-    cliConn.channel = make(chan []byte, 10240)
+    cliConn.rw = bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw))
     return cliConn
 }
 
 func (this *ClientConnection) Send(buf []byte) {
     if this.connState == ConnStateDisc { return }
+    fmt.Println("Send", len(buf))
 
     head := make([]byte, 4)
     binary.LittleEndian.PutUint32(head, uint32(len(buf)))
     buf = append(head, buf...)
 
-    select {
-        case this.channel <- buf:
-
-        default:
-    }
-}
-
-func (this *ClientConnection) blockSend(b []byte) bool {
-    for len(b) > 0 {
-        n, err := this.conn.Write(b)
-        if err == nil {
-            b = b[n:]
-        } else if e, ok := err.(*net.OpError); ok && e.Temporary() {
-            continue
-        } else {
-            if this.connState != ConnStateDisc {
-                this.connState = ConnStateDisc
-            }
-            fmt.Println("blockSend disconnect")
-            return false
-        }
-    }
-    return true
+    this.rw.Write(buf)
 }
 
 func (this *ClientConnection) sendall() bool {
-    for moreData := true; moreData; {
-        select {
-            case b := <-this.channel:
-                if !this.blockSend(b) {
-                    return false
-                }
-            default:
-                moreData = false
+    if err := this.rw.Flush(); err != nil {
+        if this.connState != ConnStateDisc {
+            this.connState = ConnStateDisc
         }
+        fmt.Print("send err:", err)
+        return false
     }
     return true
 }
@@ -87,14 +59,13 @@ func (this *ClientConnection) duplexRead(buff []byte) bool {
         }
 
         // read
-        this.conn.SetReadDeadline(time.Now().Add(1e8))
-        n, err := this.reader.Read(buff[read_size:])
+        n, err := this.rw.Read(buff[read_size:])
         if err != nil {
-            if e, ok := err.(*net.OpError); ok && e.Temporary() {
+            if e, ok := err.(*RwError); ok && e.ErrNo == ERR_READ_TIMEOUT {
                 read_size = n
                 continue
             } else {
-                //fmt.Println("read err, disconnect", err)
+                fmt.Println("read err, disconnecting, reason:", err)
                 return false
             }
         }

@@ -38,9 +38,13 @@ func main() {
     authServer := game.AuthServer{}
     go authServer.Start()
     
+    //mgr := game.NewGameMgr()
+    //gs := network.NewGameServer(mgr)
+    //go gs.Start()
+
     mgr := game.NewGameMgr()
-    gs := network.NewGameServer(mgr)
-    go gs.Start()
+    salsrv := network.NewSalServer(mgr)
+    go salsrv.Start()
 
     handleSig()
 }
