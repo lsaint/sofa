@@ -34,7 +34,6 @@ func NewClientConnection(rw *SalReadWriter) *ClientConnection {
 
 func (this *ClientConnection) Send(buf []byte) {
     if this.connState == ConnStateDisc { return }
-    fmt.Println("Send", len(buf))
 
     head := make([]byte, 4)
     binary.LittleEndian.PutUint32(head, uint32(len(buf)))

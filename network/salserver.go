@@ -135,7 +135,6 @@ func (this *SalServer) handleLoginRep(ev *C.openyy_SALEvent_t) {
 
     go func() {
         for w := range this.WrChan {
-            fmt.Println("openyy_SAL_SendMsgToUser", w.TopCh, w.Uid)
             msg := (*C.char)(unsafe.Pointer(&w.Msg[0]))
             C.openyy_SAL_SendMsgToUser(this.sal, w.TopCh, w.Uid, msg, C.uint(len(w.Msg)))
         }
@@ -251,7 +250,6 @@ func (this *SalReadWriter) Read(p []byte) (n int, err error) {
 }
 
 func (this *SalReadWriter) Write(p []byte) (n int, err error) {
-    fmt.Println("rw.Write", len(p))
     n = len(p)
     if n == 0 {
         return 0, &RwError{ERR_WRITE_0}
