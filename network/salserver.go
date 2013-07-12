@@ -17,6 +17,7 @@ import (
     "unsafe"
     "reflect"
     "time"
+    "sync"
     "encoding/binary"
 
     pb "code.google.com/p/goprotobuf/proto"
@@ -38,7 +39,8 @@ type _IDispatcher interface {
 type SalServer struct {
     sal             *C.openyy_SAL_t
     WrChan          chan *WriteMsg
-    URW             map[uint32]*SalReadWriter
+    Ucc             *UCC
+    Ping            map[uint32]time.Duration
     Dispatcher      _IDispatcher
 }
 
@@ -49,7 +51,7 @@ func NewSalServer(d _IDispatcher) *SalServer {
     }
     return &SalServer{sal: sal, 
                 WrChan: make(chan *WriteMsg, 10240),
-                URW: make(map[uint32]*SalReadWriter),
+                Ucc: NewUCC(),
                 Dispatcher: d}
 }
 
@@ -84,7 +86,7 @@ func (this *SalServer) handleEvent(c chan *C.openyy_SALEvent_t, d chan bool) {
         ev_type := C.openyy_SALEvent_GetType(ev) 
         switch ev_type {
             case C._SAL_LOG_EVENT_TP:
-                this.handleLog(ev)
+                //this.handleLog(ev)
 
             case C._SAL_SUBSCRIBE_HASH_CHANNEL_RES_EVENT_TP:
                 this.handleSubscribeRep(ev)
@@ -138,22 +140,43 @@ func (this *SalServer) handleLoginRep(ev *C.openyy_SALEvent_t) {
             C.openyy_SAL_SendMsgToUser(this.sal, w.TopCh, w.Uid, msg, C.uint(len(w.Msg)))
         }
     }()
+
+    go func() {
+        for {
+            now := time.Now().Unix()
+            this.Ucc.Lock()
+            for u, cc := range this.Ucc.uid2cc {
+                if now - cc.T > 60 {
+                    delete(this.Ucc.uid2cc, u)    
+                    this.Dispatcher.Disconnect(cc)
+                    fmt.Println("delete", u)
+                }
+            }
+            this.Ucc.Unlock()
+            time.Sleep(60 * time.Second)
+        }
+    }()
 }
 
 func (this *SalServer) handleUserMsg(ev *C.openyy_SALEvent_t) {
     var top_ch, uid, msg_size C.uint
     var msg *C.char
     C.openyy_SALUserMsgEvent_Datas(ev, nil, &top_ch, &uid, &msg, &msg_size);
-    fmt.Println("[USR_MSG]", top_ch, uid, C.GoStringN(msg, C.int(msg_size)), msg_size)
-    b := C.GoBytes(unsafe.Pointer(msg), C.int(msg_size))
+    fmt.Println("[USR_MSG]", top_ch, uid, msg_size)
 
-    rd, ok := this.URW[uint32(uid)]
+    cc, ok := this.Ucc.Get(uint32(uid))
     if !ok {
-        rd = &SalReadWriter{uid, top_ch, make(chan []byte, 512), this.WrChan}
-        go this.acceptConn(rd)
+        rw := &SalReadWriter{uid, top_ch, make(chan []byte, 512), this.WrChan}
+        cc = NewClientConnection(rw)
+        this.Ucc.Add(uint32(uid), cc)
+        go this.acceptConn(cc)
     }
+    cc.T = time.Now().Unix()
+    if msg_size < 8 {return}
+
+    b := C.GoBytes(unsafe.Pointer(msg), C.int(msg_size))
     select {
-        case rd.RwChan <- b:
+        case cc._rw.RdChan <- b:
 
         default:
             fmt.Println("user recive buff overflow")
@@ -166,11 +189,10 @@ func (this *SalServer) handleUserMsg(ev *C.openyy_SALEvent_t) {
     //C.openyy_SAL_BcMsgToTopCh(this.sal, 43670710, 0, m, 4)
 }
 
-func (this *SalServer) acceptConn(rw *SalReadWriter) {
-    cliConn := NewClientConnection(rw)
+func (this *SalServer) acceptConn(cc *ClientConnection) {
     for {
-        if buff_body, ok := cliConn.duplexReadBody(); ok {
-            this.parse(cliConn, buff_body)
+        if buff_body, ok := cc.duplexReadBody(); ok {
+            this.parse(cc, buff_body)
             continue
         }
         //this.Dispatcher.Disconnect(cliConn)
@@ -210,13 +232,13 @@ type WriteMsg struct {
 type SalReadWriter struct {
     Uid         C.uint
     TopCh       C.uint
-    RwChan      chan []byte
+    RdChan      chan []byte
     WrChan      chan *WriteMsg
 }
 
 func (this *SalReadWriter) Read(p []byte) (n int, err error) {
     select {
-        case b := <-this.RwChan:
+        case b := <-this.RdChan:
             n := len(b)
             if n > len(p) {
                 return 0, &RwError{ERR_MSG_TOO_LONG}
@@ -247,5 +269,35 @@ type RwError struct {
 
 func (this *RwError) Error() string {
     return fmt.Sprintf("Rw ErrNo:%v\n", this.ErrNo)
+}
+
+///
+
+type UCC struct {
+    uid2cc  map[uint32]*ClientConnection
+    sync.RWMutex
+}
+
+func NewUCC() *UCC {
+    return &UCC{uid2cc: make(map[uint32]*ClientConnection)}
+}
+
+func (this *UCC) Add(uid uint32, cc *ClientConnection) {
+    this.Lock()
+    defer this.Unlock()
+    this.uid2cc[uid] = cc
+}
+
+func (this *UCC) Get(uid uint32) (cc *ClientConnection, ok bool){
+    this.RLock()
+    defer this.RUnlock()
+    cc, ok = this.uid2cc[uid]
+    return
+}
+
+func (this *UCC) Set(uid uint32) {
+    this.Lock()
+    defer this.Unlock()
+    this.uid2cc[uid].T = time.Now().Unix()
 }
 

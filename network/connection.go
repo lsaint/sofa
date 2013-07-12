@@ -1,9 +1,10 @@
 package network
 
 import (
-    "io"
+    //"io"
     "fmt"
     //"net"
+    "time"
     "bufio"
     "encoding/binary"
 
@@ -17,14 +18,18 @@ const (
 )
 
 type ClientConnection struct {
+    _rw         *SalReadWriter
     rw          *bufio.ReadWriter
     connState   int
+    T           int64
 }
 
-func NewClientConnection(rw io.ReadWriter) *ClientConnection {
-    cliConn := new(ClientConnection)
-    cliConn.rw = bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw))
-    return cliConn
+func NewClientConnection(rw *SalReadWriter) *ClientConnection {
+    cc := new(ClientConnection)
+    cc._rw = rw
+    cc.rw = bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw))
+    cc.T = time.Now().Unix()
+    return cc
 }
 
 func (this *ClientConnection) Send(buf []byte) {
