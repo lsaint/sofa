@@ -28,7 +28,10 @@ func (this *GameMgr) Dispatch(cliConn *network.ClientConnection, request interfa
     //fmt.Println("onProto name", pname)
     player, ok := this.GetPlayer(cliConn)
 
-    if pname == "Login" && !ok {
+    if pname == "Login" {
+        if ok {
+            player.Room.Leave(player)
+        }
         this.OnLogin(cliConn, request)
         return
     }

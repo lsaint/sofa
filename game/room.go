@@ -160,8 +160,10 @@ func (this *GameRoom) PackTugMsg(player *Player) *proto.S2CTugRep {
     upper := sn + 2
     if sn > 2 {
         lower = sn - 2
+    } else {
+        upper = 5
     }
-    for i:=lower; i<upper; i++ {
+    for i:=lower; i<=upper; i++ {
         if ud, exist := this.Seat2UserData[i]; exist {
             rep.SeatList = append(rep.SeatList, ud)
         }
