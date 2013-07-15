@@ -45,7 +45,9 @@ type SalServer struct {
 }
 
 func NewSalServer(d _IDispatcher) *SalServer {
-    sal := C.openyy_SAL_New(10088, C.CString("ssssssssssssssssssss"))
+    key := C.CString("ssssssssssssssssssss")
+    defer C.free(unsafe.Pointer(key))
+    sal := C.openyy_SAL_New(10088, key)
     if C.openyy_SAL_Init(sal) < 0 {
         panic("Init sal error")
     }
